@@ -7,18 +7,13 @@ import {
 import { 
   Droplets, Map as MapIcon, BarChart3, FileText, 
   Factory, Calendar, AlertCircle, CheckCircle2,
-  Filter
+  Filter, X, MapPin, Info
 } from 'lucide-react';
 
 // --- CONFIGURACIÓN DE SUPABASE ---
-// Este código es el correcto para Vercel/Vite.
-// Usa import.meta.env para leer las variables de entorno.
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
 
-// Inicializamos el cliente. 
-// Si las variables no existen (como en este chat), no fallará catastróficamente, 
-// pero mostrará un error en consola.
 let supabase = null;
 try {
   if (supabaseUrl && supabaseKey) {
@@ -33,9 +28,8 @@ try {
 const COLORS = ['#0ea5e9', '#22c55e', '#eab308', '#f97316', '#ef4444', '#8b5cf6', '#6366f1'];
 
 // --- DATOS DE RESPALDO (Fallback) ---
-// Se usarán solo si la conexión a Supabase falla o no hay datos.
 const FALLBACK_DATA = [
-  { id: 1, titular: "Sin conexión a DB", uso: "Muestra", vol_autorizado: 1000, lat: 13.7, lon: -89.2, depto: "San Salvador", estado_pozo: "Inactivo" }
+  { id: 1, titular: "Sin conexión a DB", uso: "Muestra", vol_autorizado: 1000, lat: 13.7, lon: -89.2, depto: "San Salvador", municipio: "San Salvador", estado_pozo: "Inactivo", plazo: 0, vencimiento: "N/A" }
 ];
 
 // --- COMPONENTES AUXILIARES ---
@@ -52,6 +46,112 @@ const StatCard = ({ title, value, subtext, icon: Icon, colorClass }) => (
     </div>
   </div>
 );
+
+// --- COMPONENTE MODAL (FICHA DESCRIPTIVA) ---
+const DetailModal = ({ item, onClose }) => {
+  if (!item) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        
+        {/* Header del Modal */}
+        <div className="bg-slate-50 border-b border-slate-100 p-6 flex justify-between items-start">
+          <div className="flex gap-4">
+            <div className="bg-blue-100 p-3 rounded-xl h-fit">
+              <FileText className="text-blue-600" size={24} />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-slate-800 leading-tight">{item.titular}</h2>
+              <p className="text-sm text-slate-500 mt-1 flex items-center gap-1">
+                <span className="font-mono bg-slate-200 px-1.5 py-0.5 rounded text-xs text-slate-600">ID: {item.id}</span>
+                <span className="text-slate-400">•</span>
+                <span>{item.uso}</span>
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-2 rounded-full transition-colors"
+          >
+            <X size={24} />
+          </button>
+        </div>
+
+        {/* Contenido del Modal */}
+        <div className="p-6 overflow-y-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Sección: Detalles Generales */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                <Info size={14} /> Información del Permiso
+              </h3>
+              <div className="bg-slate-50 p-4 rounded-xl space-y-3 border border-slate-100">
+                <div className="flex justify-between border-b border-slate-200 pb-2">
+                  <span className="text-slate-500 text-sm">Volumen Autorizado</span>
+                  <span className="font-bold text-slate-700 font-mono">{item.vol_autorizado?.toLocaleString()} m³</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-200 pb-2">
+                  <span className="text-slate-500 text-sm">Plazo Otorgado</span>
+                  <span className="font-medium text-slate-700">{item.plazo} Años</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-200 pb-2">
+                  <span className="text-slate-500 text-sm">Vencimiento</span>
+                  <span className="font-medium text-slate-700">{item.vencimiento}</span>
+                </div>
+                <div className="flex justify-between pt-1">
+                  <span className="text-slate-500 text-sm">Estado Actual</span>
+                  <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                    item.estado_pozo?.includes('Activo') || item.estado_pozo?.includes('Completado')
+                    ? 'bg-green-100 text-green-700' 
+                    : 'bg-yellow-100 text-yellow-700'
+                  }`}>
+                    {item.estado_pozo}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Sección: Ubicación */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                <MapPin size={14} /> Ubicación Geográfica
+              </h3>
+              <div className="bg-slate-50 p-4 rounded-xl space-y-3 border border-slate-100">
+                <div className="flex flex-col gap-1">
+                  <span className="text-slate-500 text-xs">Departamento</span>
+                  <span className="font-medium text-slate-700">{item.depto}</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-slate-500 text-xs">Municipio</span>
+                  <span className="font-medium text-slate-700">{item.municipio}</span>
+                </div>
+                <div className="flex flex-col gap-1 pt-2 border-t border-slate-200 mt-2">
+                  <span className="text-slate-500 text-xs">Coordenadas</span>
+                  <span className="font-mono text-xs text-slate-600 bg-white p-2 rounded border border-slate-200">
+                    Lat: {item.lat} <br/> Lon: {item.lon}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Footer del Modal */}
+        <div className="bg-slate-50 p-4 border-t border-slate-100 flex justify-end">
+          <button 
+            onClick={onClose}
+            className="px-6 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-medium transition-colors"
+          >
+            Cerrar Ficha
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // --- COMPONENTE DE MAPA ---
 
@@ -128,6 +228,9 @@ export default function App() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
+  
+  // Estado para la ficha seleccionada
+  const [selectedItem, setSelectedItem] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -145,7 +248,6 @@ export default function App() {
     }
 
     try {
-      // Nombre exacto de tu tabla en Supabase: 'pozos'
       const { data: pozos, error } = await supabase
         .from('pozos')
         .select('*');
@@ -153,7 +255,6 @@ export default function App() {
       if (error) throw error;
 
       if (pozos && pozos.length > 0) {
-        // Mapeo de columnas CSV -> Estado React
         const formattedData = pozos.map(p => ({
           id: p.id || p.FID || Math.random(),
           titular: p.Titular || "Desconocido",
@@ -199,6 +300,7 @@ export default function App() {
     return Object.keys(grouped).map(key => ({ name: key, value: grouped[key] })).sort((a,b) => b.value - a.value);
   }, [filteredData]);
 
+  // Modificado para guardar la referencia completa al objeto original y permitir interactividad
   const topCompanies = useMemo(() => {
     return [...filteredData]
       .sort((a, b) => b.vol_autorizado - a.vol_autorizado)
@@ -206,7 +308,8 @@ export default function App() {
       .map(item => ({
         name: item.titular.length > 15 ? item.titular.substring(0, 15) + '...' : item.titular,
         full_name: item.titular,
-        volumen: item.vol_autorizado
+        volumen: item.vol_autorizado,
+        originalData: item // Guardamos el objeto completo para el modal
       }));
   }, [filteredData]);
 
@@ -228,6 +331,11 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
       
+      {/* MODAL DE DETALLE */}
+      {selectedItem && (
+        <DetailModal item={selectedItem} onClose={() => setSelectedItem(null)} />
+      )}
+
       {/* HEADER */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -315,15 +423,34 @@ export default function App() {
               </div>
 
               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2"><BarChart3 size={20} className="text-emerald-500"/>Top 5 Empresas</h3>
+                <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <BarChart3 size={20} className="text-emerald-500"/>
+                  Top 5 Empresas (Interactiva)
+                </h3>
+                <p className="text-xs text-slate-500 mb-2">Haz clic en una barra para ver detalles</p>
                 <div className="h-80 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart layout="vertical" data={topCompanies} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <BarChart 
+                      layout="vertical" 
+                      data={topCompanies} 
+                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                    >
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                       <XAxis type="number" hide />
                       <YAxis dataKey="name" type="category" width={100} style={{fontSize: '11px'}} />
                       <RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none' }} formatter={(value) => [`${value.toLocaleString()} m³`, 'Volumen']} />
-                      <Bar dataKey="volumen" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20}>
+                      <Bar 
+                        dataKey="volumen" 
+                        fill="#3b82f6" 
+                        radius={[0, 4, 4, 0]} 
+                        barSize={20}
+                        onClick={(data) => {
+                          if (data && data.originalData) {
+                            setSelectedItem(data.originalData);
+                          }
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      >
                         {topCompanies.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                       </Bar>
                     </BarChart>
@@ -343,7 +470,10 @@ export default function App() {
 
         {activeTab === 'datos' && (
           <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-             <div className="p-6 border-b border-slate-100"><h3 className="font-bold text-lg text-slate-800">Detalle de Autorizaciones</h3></div>
+             <div className="p-6 border-b border-slate-100">
+               <h3 className="font-bold text-lg text-slate-800">Detalle de Autorizaciones</h3>
+               <p className="text-sm text-slate-500">Haz clic en el nombre del titular para ver la ficha completa.</p>
+             </div>
              <div className="overflow-x-auto">
                <table className="min-w-full divide-y divide-slate-200">
                  <thead className="bg-slate-50">
@@ -357,7 +487,12 @@ export default function App() {
                  <tbody className="bg-white divide-y divide-slate-200">
                    {filteredData.map((item, idx) => (
                      <tr key={item.id || idx} className="hover:bg-slate-50 transition-colors">
-                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{item.titular}</td>
+                       <td 
+                        className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer hover:underline"
+                        onClick={() => setSelectedItem(item)}
+                       >
+                         {item.titular}
+                       </td>
                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500"><span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-semibold">{item.uso}</span></td>
                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700 text-right font-mono">{item.vol_autorizado.toLocaleString()}</td>
                        <td className="px-6 py-4 whitespace-nowrap text-center"><span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${item.estado_pozo?.includes('Activo') ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{item.estado_pozo}</span></td>
